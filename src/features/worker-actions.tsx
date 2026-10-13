@@ -45,7 +45,7 @@ export function WorkerActions({ mode, profile, phone, trades, zone, offers, sele
   return <div className="worker-results">
     <p className="note">Puedes aparecer como trabajador disponible o solicitar una vacante publicada.</p>
     <button className="result-card" disabled={pending} onClick={() => onChoose('availability')}>
-      <strong>Ofrecer mi trabajo aquí</strong><span>Publicar mi oficio, experiencia y disponibilidad en esta zona.</span>
+      <strong>Ofrecer mi trabajo aquí</strong><span>Crear una publicación en esta zona y conservar las anteriores.</span>
     </button>
     <button className="result-card" disabled={pending} onClick={() => onChoose('application')}>
       <strong>Postularme a una oferta</strong><span>Elegir una vacante y enviar mi postulación al contratante.</span>
@@ -77,7 +77,7 @@ function AvailabilityForm({ profile, phone, trades, zone, pending, onPublish, on
     await onPublish(built.row)
   }
   return <form onSubmit={submit}>
-    <p className="note">Al publicar quedas disponible para trabajar. Esto actualiza tu perfil y tu zona; no crea una postulación a una vacante.</p>
+    <p className="note">Crearás una publicación independiente en esta zona. Tus publicaciones anteriores se conservan.</p>
     <fieldset disabled={pending}>
       <label>Oficio principal<select name="tradeId" defaultValue={profile.trade_id ?? ''} autoFocus required>
         <option value="">Elegir oficio</option>

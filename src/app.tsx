@@ -190,7 +190,7 @@ export function App() {
         />
       )}
       {ready && session && view === 'home' && profile && (
-        <Marketplace key={profile.id} profile={profile} phone={phone} trades={trades} onProfileUpdated={setProfile} />
+        <Marketplace key={profile.id} profile={profile} phone={phone} trades={trades} />
       )}
     </main>
   )

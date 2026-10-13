@@ -3,7 +3,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { PILOT_ZONE } from '../lib/profile.mjs'
 
-export type MapPoint = { id: string; latitude: number; longitude: number; label: string }
+export type MapPoint = { id: string; latitude: number; longitude: number; label: string; kind?: 'offer' | 'worker' | 'mine' }
 
 export function DiscoveryMap({ points, selectedId, onSelect, onPick, onMapClick, sidebarInsets }: {
   points: MapPoint[]
@@ -59,7 +59,7 @@ export function DiscoveryMap({ points, selectedId, onSelect, onPick, onMapClick,
       const position: L.LatLngTuple = [point.latitude, point.longitude]
       positions.push(position)
       const icon = L.divIcon({
-        className: point.id === selectedId ? 'map-pin selected' : 'map-pin',
+        className: `map-pin ${point.kind ?? ''}${point.id === selectedId ? ' selected' : ''}`,
         html: '<span aria-hidden="true"></span>', iconSize: [26, 26], iconAnchor: [13, 13],
       })
       const marker = L.marker(position, { icon, title: point.label, keyboard: true }).addTo(markers.current)

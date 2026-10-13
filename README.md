@@ -13,13 +13,19 @@ Esta prueba de concepto demuestra un recorrido completo con información persist
 - En web, un único mapa ocupa toda la vista, con explorador a la izquierda y detalle/formulario a la derecha. Ambos paneles se pueden ocultar. En móvil se muestra un panel inferior a la vez.
 - Mapa y listado de trabajadores disponibles para contratantes aprobados, sin revelar el celular en el descubrimiento.
 - Selección de ubicación de obra y zona aproximada de trabajo tocando el mapa; también se admite ingresar las coordenadas de la obra.
-- Tocar un punto vacío como trabajador abre dos opciones: **Ofrecer mi trabajo aquí** y **Postularme a una oferta**. La primera actualiza la disponibilidad y zona del perfil; la segunda requiere elegir una vacante publicada. El botón **Trabajo y postulaciones** abre las mismas rutas sin depender del clic en mapa.
+- Tocar un punto vacío como trabajador abre dos opciones: **Ofrecer mi trabajo aquí** y **Postularme a una oferta**. La primera crea una publicación independiente y conserva las anteriores; la segunda requiere elegir una vacante publicada. El botón **Trabajo y postulaciones** abre las mismas rutas sin depender del clic en mapa.
 - Postulación, consentimiento explícito de contacto, seguimiento, WhatsApp, confirmación de contacto, descarte, retiro y selección.
 - Seleccionar cubre la vacante y descarta las demás postulaciones activas, en una sola transacción de BD.
 
 No se agregan políticas legales, pagos, nómina, contratos digitales, chat interno, reputación, IA, cuadrillas ni un backend adicional.
 
-La disponibilidad es una declaración del trabajador, visible para contratantes aprobados. No es una postulación independiente ni un anuncio nuevo por cada punto del mapa: sigue habiendo un perfil con una zona de trabajo. Volver a publicar actualiza ese perfil. Su celular conserva las restricciones existentes de consentimiento por postulación.
+Cada publicación de disponibilidad se guarda en `worker_publications` con su oficio, experiencia, radio y ubicación aproximada. Volver a publicar agrega un punto y no mueve los anteriores. El perfil conserva sus datos generales. La migración rescata la última zona disponible del perfil; las zonas sobrescritas antes de este cambio no tienen historial recuperable. El celular conserva las restricciones existentes de consentimiento por postulación.
+
+### Ejemplos de Pereira
+
+`supabase/seed-demo.sql` agrega cinco trabajadores ficticios y cuatro vacantes en Centro, Pinares, Cuba, Boston y Cerritos. Todos llevan la etiqueta `[DEMO]`; no tienen contraseñas, identidades de acceso ni contactos. El script se puede repetir sin duplicar registros y no modifica perfiles reales. Las vacantes tienen inicio a 30 días de ejecutar el script y luego caducan; no se renuevan automáticamente.
+
+Los trabajadores ven sus publicaciones, los ejemplos DEMO y las vacantes vigentes. Los contratantes aprobados pueden consultar las publicaciones de trabajadores desde **Trabajadores**. Azul identifica tus publicaciones, verde las de otros trabajadores y naranja las vacantes. Los datos DEMO se almacenan en Supabase y las postulaciones a vacantes DEMO se guardan, pero ninguna empresa real responderá.
 
 ## Lo que ya había y lo que se completa
 

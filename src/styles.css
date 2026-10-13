@@ -183,6 +183,13 @@ a { color: #8c3d16; }
 .discovery-map.picking { cursor: crosshair; }
 .map-pin { border: 3px solid #fff; border-radius: 50%; background: #c45c26; box-shadow: 0 2px 8px rgb(0 0 0 / 30%); }
 .map-pin.selected { background: #1f1a17; }
+.map-pin.worker { background: #287e7b; }
+.map-pin.mine { background: #315ba8; }
+.map-pin.selected { outline: 3px solid #1f1a17; outline-offset: 2px; }
+.map-legend { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.map-legend span:first-child { color: #c45c26; }
+.map-legend span:nth-child(2) { color: #287e7b; }
+.map-legend span:nth-child(3) { color: #315ba8; }
 .map-pin:focus-visible { outline: 3px solid #1f1a17; outline-offset: 3px; }
 
 .map-screen {

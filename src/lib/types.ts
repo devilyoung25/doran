@@ -15,6 +15,21 @@ export type Profile = {
   latitude: number | null
   longitude: number | null
   contractor_approved_at: string | null
+  is_demo: boolean
+}
+
+export type WorkerPublication = {
+  id: string
+  worker_id: string
+  trade_id: number
+  years_experience: number
+  work_radius_km: number
+  available_from: string | null
+  city: string
+  latitude: number
+  longitude: number
+  created_at: string
+  profiles: Profile
 }
 
 export type Offer = {

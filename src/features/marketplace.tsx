@@ -2,18 +2,17 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { PILOT_CITY, PILOT_ZONE } from '../lib/profile.mjs'
 import { CONTACT_CONSENT_VERSION, buildOffer, marketplaceError, todayInColombia } from '../lib/offers.mjs'
-import type { Application, Offer, Profile, Trade } from '../lib/types'
+import type { Application, Offer, Profile, Trade, WorkerPublication } from '../lib/types'
 import { OfferForm, type OfferLocation } from './offer-form'
 import { OfferCard, type ApplicationAction } from './offer-card'
 import { DiscoveryMap } from './discovery-map'
 import { WorkerDiscovery } from './worker-discovery'
 import { WorkerActions, type WorkerAction, type WorkZone, type AvailabilityRow } from './worker-actions'
 
-export function Marketplace({ profile, phone, trades, onProfileUpdated }: {
+export function Marketplace({ profile, phone, trades }: {
   profile: Profile
   phone: string
   trades: Trade[]
-  onProfileUpdated: (profile: Profile) => void
 }) {
   const [offers, setOffers] = useState<Offer[]>([])
   const [applications, setApplications] = useState<Application[]>([])
@@ -29,7 +28,7 @@ export function Marketplace({ profile, phone, trades, onProfileUpdated }: {
   const [tradeId, setTradeId] = useState('')
   const [publishing, setPublishing] = useState(false)
   const [selectedOfferId, setSelectedOfferId] = useState('')
-  const [discoveryWorkers, setDiscoveryWorkers] = useState<Profile[]>([])
+  const [discoveryWorkers, setDiscoveryWorkers] = useState<WorkerPublication[]>([])
   const [selectedWorkerId, setSelectedWorkerId] = useState('')
   const [resultsOpen, setResultsOpen] = useState(true)
   const [detailOpen, setDetailOpen] = useState(false)
@@ -73,6 +72,10 @@ export function Marketplace({ profile, phone, trades, onProfileUpdated }: {
           : query.eq('city', PILOT_CITY).eq('status', 'open').gte('start_date', todayInColombia())
         const offerRes = await query
         if (offerRes.error) throw offerRes.error
+        // shortcut: latest 50 visible publications, add pagination when the pilot grows.
+        const publicationRes = await db.from('worker_publications').select('*, profiles!inner(*)')
+          .eq('city', PILOT_CITY).order('created_at', { ascending: false }).limit(50)
+        if (publicationRes.error) throw publicationRes.error
         let nextOffers = (offerRes.data ?? []) as Offer[]
         const offerIds = nextOffers.map((offer) => offer.id)
         const appRes = contractor
@@ -103,6 +106,7 @@ export function Marketplace({ profile, phone, trades, onProfileUpdated }: {
         setApplications(nextApps)
         setWorkers(nextWorkers)
         setPhones(nextPhones)
+        setDiscoveryWorkers((publicationRes.data ?? []) as WorkerPublication[])
       } catch (failure) {
         if (!cancelled) {
           setLoadFailed(true)
@@ -161,14 +165,18 @@ export function Marketplace({ profile, phone, trades, onProfileUpdated }: {
   async function publishAvailability(row: AvailabilityRow) {
     await perform(async () => {
       if (!supabase) throw new Error('missing_client')
-      const result = await supabase.from('profiles').update(row).eq('id', profile.id).select('*').single()
+      const result = await supabase.from('worker_publications').insert({
+        worker_id: profile.id, trade_id: row.trade_id, years_experience: row.years_experience,
+        work_radius_km: row.work_radius_km, available_from: row.available_from,
+        city: row.city, latitude: row.latitude, longitude: row.longitude,
+      }).select('id').single()
       if (result.error) throw result.error
-      onProfileUpdated(result.data as Profile)
       setWorkerAction(null)
       setDetailOpen(false)
       setResultsOpen(true)
-      setSelectedOfferId('my-zone')
-    }, 'Disponibilidad guardada. El punto destacado del mapa es tu zona de trabajo.')
+      setSelectedOfferId('')
+      setSelectedWorkerId(result.data.id)
+    }, 'Publicación guardada. Tus puntos anteriores se conservan en el mapa.')
   }
 
   async function action(name: ApplicationAction, applicationId: string, phone?: string) {
@@ -210,29 +218,36 @@ export function Marketplace({ profile, phone, trades, onProfileUpdated }: {
   })
   const selectedOffer = visible.find((offer) => offer.id === selectedOfferId)
   const selectedWorker = discoveryWorkers.find((worker) => worker.id === selectedWorkerId)
+  const visibleWorkers = discoveryWorkers.filter((worker) => !tradeId || worker.trade_id === Number(tradeId))
+  const myPublications = visibleWorkers.filter((worker) => worker.worker_id === profile.id)
   const viewingWorkers = tab === 'workers'
   const availableOffers = offers.filter((offer) => offer.status === 'open' && offer.start_date >= todayInColombia()
     && !applications.some((application) => application.job_offer_id === offer.id))
-  const resultPoints = publishing
-    ? location.latitude && location.longitude ? [{ id: 'location', label: 'Ubicación elegida', latitude: Number(location.latitude), longitude: Number(location.longitude) }] : []
-    : viewingWorkers
-      ? discoveryWorkers.flatMap((worker) => worker.latitude !== null && worker.longitude !== null ? [{ id: worker.id, label: worker.full_name, latitude: worker.latitude, longitude: worker.longitude }] : [])
-      : visible.map((offer) => ({ id: offer.id, label: offer.title, latitude: offer.latitude, longitude: offer.longitude }))
-  const points = contractor ? resultPoints : workerAction === 'availability' || workerAction === 'choice'
-    ? [...resultPoints, { id: 'chosen-zone', label: 'Zona elegida para ofrecer mi trabajo', ...workZone }]
-    : profile.latitude !== null && profile.longitude !== null
-      ? [...resultPoints, { id: 'my-zone', label: 'Mi zona de trabajo', latitude: profile.latitude, longitude: profile.longitude }]
+  const workerPoints = visibleWorkers.map((worker) => ({
+    id: worker.id, label: `${worker.profiles.full_name} · ${trades.find((trade) => trade.id === worker.trade_id)?.name}`,
+    latitude: worker.latitude, longitude: worker.longitude,
+    kind: worker.worker_id === profile.id ? 'mine' as const : 'worker' as const,
+  }))
+  const resultPoints = viewingWorkers ? workerPoints : [
+    ...visible.map((offer) => ({ id: offer.id, label: offer.title, latitude: offer.latitude, longitude: offer.longitude, kind: 'offer' as const })),
+    ...(!contractor ? workerPoints : []),
+  ]
+  const points = publishing && location.latitude && location.longitude
+    ? [...resultPoints, { id: 'location', label: 'Ubicación elegida', latitude: Number(location.latitude), longitude: Number(location.longitude) }]
+    : workerAction === 'availability' || workerAction === 'choice'
+      ? [...resultPoints, { id: 'chosen-zone', label: 'Zona elegida para ofrecer mi trabajo', ...workZone }]
       : resultPoints
 
   function selectResult(id: string) {
-    if (id === 'my-zone') return startWorkerAction('choice', {
-      latitude: profile.latitude ?? PILOT_ZONE.latitude,
-      longitude: profile.longitude ?? PILOT_ZONE.longitude,
-    })
     if (id === 'chosen-zone') return startWorkerAction('choice')
     if (workerAction !== 'application') setWorkerAction(null)
-    if (viewingWorkers) setSelectedWorkerId(id)
-    else setSelectedOfferId(id)
+    if (discoveryWorkers.some((worker) => worker.id === id)) {
+      setSelectedWorkerId(id)
+      setSelectedOfferId('')
+    } else {
+      setSelectedOfferId(id)
+      setSelectedWorkerId('')
+    }
     setDetailOpen(Boolean(id))
     if (compact && id) setResultsOpen(false)
   }
@@ -252,6 +267,7 @@ export function Marketplace({ profile, phone, trades, onProfileUpdated }: {
     setTab('offers')
     setTradeId('')
     setSelectedOfferId('')
+    setSelectedWorkerId('')
     setDetailOpen(true)
     if (compact) setResultsOpen(false)
   }
@@ -279,7 +295,7 @@ export function Marketplace({ profile, phone, trades, onProfileUpdated }: {
 
   return (
     <section className="map-workspace" aria-label="Vacantes y postulaciones" data-detail-open={detailOpen}>
-      <DiscoveryMap points={points} selectedId={viewingWorkers ? selectedWorkerId : selectedOfferId}
+      <DiscoveryMap points={points} selectedId={selectedWorkerId || selectedOfferId}
         onSelect={publishing || workerAction === 'availability' ? undefined : selectResult} onMapClick={clickMap}
         sidebarInsets={{ left: resultsOpen ? 352 : 0, right: detailOpen ? 432 : 0 }}
         onPick={pending ? undefined : publishing ? (latitude, longitude) => setLocation({ latitude: String(latitude), longitude: String(longitude) })
@@ -302,13 +318,20 @@ export function Marketplace({ profile, phone, trades, onProfileUpdated }: {
             <button className="ghost" disabled={pending || publishing} aria-pressed={tab === 'offers'} onClick={() => changeTab('offers')}>{contractor ? 'Mis ofertas' : 'Ofertas'}</button>
             <button className="ghost" disabled={pending || publishing} aria-pressed={tab === (contractor ? 'workers' : 'applications')} onClick={() => changeTab(contractor ? 'workers' : 'applications')}>{contractor ? 'Trabajadores' : 'Mis postulaciones'}</button>
           </div>
-          {!contractor && tab === 'offers' && profile.availability === 'available' && <button className="result-card" onClick={() => selectResult('my-zone')} disabled={pending}>
-            <strong>Mi disponibilidad publicada</strong>
-            <span>{trades.find((trade) => trade.id === profile.trade_id)?.name} · {profile.years_experience} años de experiencia</span>
-            <span>Zona aproximada: {profile.latitude?.toFixed(3)}, {profile.longitude?.toFixed(3)}</span>
-            <span>Ver o editar mi disponibilidad →</span>
-          </button>}
-          {viewingWorkers ? <WorkerDiscovery trades={trades} selectedId={selectedWorkerId} onSelect={selectResult} onWorkersChange={setDiscoveryWorkers} /> : <>
+          <p className="note map-legend"><span>● Vacantes</span><span>● Trabajadores</span>{!contractor && <span>● Mis publicaciones</span>}</p>
+          <p className="note">Los perfiles y vacantes marcados DEMO son ficticios para probar el mapa.</p>
+          {!contractor && tab === 'offers' && <>
+            <h3>Mis publicaciones ({myPublications.length})</h3>
+            {myPublications.map((worker) => <button key={worker.id} className="result-card" onClick={() => selectResult(worker.id)} disabled={pending} aria-pressed={selectedWorkerId === worker.id}>
+              <strong>{trades.find((trade) => trade.id === worker.trade_id)?.name} · Disponible</strong>
+              <span>Zona: {worker.latitude.toFixed(3)}, {worker.longitude.toFixed(3)}</span>
+              <span>Ver publicación →</span>
+            </button>)}
+            {myPublications.length === 0 && !loading && <p className="note">Todavía no hay publicaciones tuyas para este oficio.</p>}
+          </>}
+          {viewingWorkers ? <WorkerDiscovery trades={trades} workers={visibleWorkers} loading={loading}
+            tradeId={tradeId} onTradeChange={(id) => { setTradeId(id); setSelectedWorkerId(''); setDetailOpen(false) }}
+            onRefresh={() => setRefresh((value) => value + 1)} selectedId={selectedWorkerId} onSelect={selectResult} /> : <>
             <p className="note">{contractor ? 'Toca un punto del mapa para crear una oferta, o elige una existente para revisar sus candidatos.' : 'Toca un punto del mapa para ofrecer tu trabajo o elegir una oferta a la que postularte.'}</p>
             {tab === 'offers' && <label>Filtrar por oficio<select value={tradeId} onChange={(event) => { setTradeId(event.target.value); setSelectedOfferId(''); setDetailOpen(false) }}>
               <option value="">Todos los oficios</option>
@@ -327,18 +350,21 @@ export function Marketplace({ profile, phone, trades, onProfileUpdated }: {
       </aside>
 
       <aside className="workspace-panel detail-panel" hidden={!detailOpen} aria-label={publishing ? 'Formulario de oferta' : workerAction ? 'Trabajo y postulaciones' : 'Detalle del resultado'}>
-        <div className="panel-heading"><h2>{publishing ? 'Nueva oferta' : workerAction === 'choice' ? '¿Qué quieres hacer aquí?' : workerAction === 'availability' ? 'Ofrecer mi trabajo aquí' : workerAction === 'application' ? 'Postularme a una oferta' : viewingWorkers ? 'Perfil del trabajador' : 'Oferta y postulaciones'}</h2><button className="ghost" onClick={() => setDetailOpen(false)} aria-label="Ocultar detalle">×</button></div>
+        <div className="panel-heading"><h2>{publishing ? 'Nueva oferta' : workerAction === 'choice' ? '¿Qué quieres hacer aquí?' : workerAction === 'availability' ? 'Ofrecer mi trabajo aquí' : workerAction === 'application' ? 'Postularme a una oferta' : selectedWorker ? 'Publicación del trabajador' : 'Oferta y postulaciones'}</h2><button className="ghost" onClick={() => setDetailOpen(false)} aria-label="Ocultar detalle">×</button></div>
         {publishing ? <OfferForm contractorId={profile.id} trades={trades} location={location} onLocationChange={setLocation}
           pending={pending || loading} onPublish={publish} onCancel={() => { setPublishing(false); setDetailOpen(false); setResultsOpen(true) }} />
           : workerAction ? <WorkerActions mode={workerAction} profile={profile} phone={phone} trades={trades} zone={workZone}
             offers={availableOffers} selectedOfferId={selectedOfferId} pending={pending || loading} loading={loading}
             onChoose={startWorkerAction} onSelectOffer={setSelectedOfferId} onPublish={publishAvailability} onApply={apply} />
-          : viewingWorkers && selectedWorker ? <article className="card"><h3>{selectedWorker.full_name}</h3>
+          : selectedWorker ? <article className="card"><h3>{selectedWorker.profiles.full_name}</h3>
             <p>{trades.find((trade) => trade.id === selectedWorker.trade_id)?.name} · {selectedWorker.years_experience} años de experiencia</p>
             <p>{selectedWorker.city} · Radio de trabajo: {selectedWorker.work_radius_km} km</p>
             {selectedWorker.available_from && <p>Disponible desde: {selectedWorker.available_from}</p>}
             <p className="note">El celular se comparte cuando este trabajador se postula a una de tus ofertas.</p>
-            <button className="primary" onClick={startPublishing}>Crear oferta para recibir postulaciones</button>
+            <p>Zona: {selectedWorker.latitude.toFixed(3)}, {selectedWorker.longitude.toFixed(3)}</p>
+            {selectedWorker.profiles.is_demo && <p className="note">Perfil DEMO: persona ficticia, sin datos de contacto reales.</p>}
+            {contractor && <button className="primary" onClick={startPublishing}>Crear oferta para recibir postulaciones</button>}
+            {selectedWorker.worker_id === profile.id && <button className="primary" onClick={() => startWorkerAction('availability', { latitude: selectedWorker.latitude, longitude: selectedWorker.longitude })}>Crear otra publicación en esta zona</button>}
           </article>
           : selectedOffer ? <OfferCard key={selectedOffer.id} offer={selectedOffer} trades={trades} profile={profile} contractor={contractor}
             applications={applications.filter((application) => application.job_offer_id === selectedOffer.id)}

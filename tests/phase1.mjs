@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import pg from 'pg'
 
@@ -169,7 +169,11 @@ async function resetDatabase() {
     }
   }
   await client.query('create schema auth')
-  await client.query('create table auth.users (id uuid primary key)')
+  await client.query(`create table auth.users (
+    id uuid primary key, aud text, role text, email text,
+    raw_app_meta_data jsonb, raw_user_meta_data jsonb,
+    created_at timestamptz, updated_at timestamptz
+  )`)
   await client.query(`
     create function auth.uid()
     returns uuid
@@ -184,11 +188,10 @@ async function resetDatabase() {
   `)
   await client.query('grant usage on schema auth to authenticated, service_role')
   await client.query('grant execute on function auth.uid() to anon, authenticated, service_role')
-  const migration = readFileSync(
-    new URL('../supabase/migrations/20261013190000_init.sql', import.meta.url),
-    'utf8',
-  )
-  await client.query(migration)
+  const directory = new URL('../supabase/migrations/', import.meta.url)
+  for (const file of readdirSync(directory).filter((name) => name.endsWith('.sql')).sort()) {
+    await client.query(readFileSync(new URL(file, directory), 'utf8'))
+  }
 }
 
 async function session(userId) {
@@ -763,6 +766,59 @@ async function main() {
     if (!row.rows[0].filled || row.rows[0].selected !== 1 || row.rows[0].rejected !== 1) {
       throw new Error(`vacancy ended inconsistent: ${JSON.stringify(row.rows[0])}`)
     }
+  })
+  const publisher = await createUser()
+  await insertWorker(publisher, null, 4.813, -75.696)
+  const insertPublication = (owner, latitude) => client.query(
+    `insert into public.worker_publications
+      (worker_id, trade_id, years_experience, work_radius_km, city, latitude, longitude)
+     values ($1, $2, 7, 10, 'Pereira', $3, -75.696) returning id`,
+    [owner, trade, latitude],
+  )
+
+  await check('two worker publications persist after profile location changes', async () => {
+    await asUser(publisher, async () => {
+      await insertPublication(publisher, 4.813)
+      await insertPublication(publisher, 4.825)
+      await client.query('update public.profiles set latitude = 4.9 where id = $1', [publisher])
+    })
+    const saved = await asUser(publisher, () => client.query(
+      'select latitude::text from public.worker_publications where worker_id = $1 order by latitude', [publisher],
+    ))
+    if (saved.rows.map((row) => row.latitude).join(',') !== '4.813,4.825') throw new Error('Publications were replaced')
+  })
+
+  await check('worker cannot publish for someone else', async () => {
+    await expectFail(worker, 'row-level security', () => insertPublication(publisher, 4.83))
+  })
+  await check('contractor cannot create worker publications', async () => {
+    await expectFail(contractor, 'row-level security', () => insertPublication(contractor, 4.83))
+  })
+  await check('other workers cannot read real worker publications', async () => {
+    const result = await asUser(worker, () => client.query('select id from public.worker_publications where worker_id = $1', [publisher]))
+    if (result.rowCount !== 0) throw new Error('Other worker publications exposed')
+  })
+  await check('approved contractor can read all worker publications', async () => {
+    const result = await asUser(contractor, () => client.query('select id from public.worker_publications where worker_id = $1', [publisher]))
+    if (result.rowCount !== 2) throw new Error('Contractor cannot discover both publications')
+  })
+  await check('workers cannot mark themselves as demo or publish invalid coordinates', async () => {
+    await expectFail(publisher, 'permission denied', () => client.query('update public.profiles set is_demo = true where id = $1', [publisher]))
+    await expectFail(publisher, 'check constraint', () => insertPublication(publisher, 91))
+  })
+  await check('demo seed is repeatable and visible to workers without real contacts', async () => {
+    await clearSession()
+    const seed = readFileSync(new URL('../supabase/seed-demo.sql', import.meta.url), 'utf8')
+    await client.query(seed)
+    await client.query(seed)
+    const demos = await asUser(publisher, () => client.query(
+      'select w.id from public.worker_publications w join public.profiles p on p.id = w.worker_id where p.is_demo',
+    ))
+    if (demos.rowCount !== 5) throw new Error('Demo points missing or duplicated')
+    const offers = await asUser(publisher, () => client.query("select id from public.job_offers where title like '[DEMO]%'"))
+    if (offers.rowCount !== 4) throw new Error('Demo offers missing or duplicated')
+    const contacts = await client.query('select c.profile_id from public.contacts c join public.profiles p on p.id = c.profile_id where p.is_demo')
+    if (contacts.rowCount !== 0) throw new Error('Demo seed created contact data')
   })
 }
 
