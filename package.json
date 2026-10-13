@@ -1,0 +1,11 @@
+{
+  "name": "obra-poc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:db": "node tests/phase1.mjs"
+  },
+  "devDependencies": {
+    "pg": "^8.16.3"
+  }
+}
