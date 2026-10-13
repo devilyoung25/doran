@@ -166,7 +166,9 @@ export function Marketplace({ profile, phone, trades, onProfileUpdated }: {
       onProfileUpdated(result.data as Profile)
       setWorkerAction(null)
       setDetailOpen(false)
-    }, 'Disponibilidad publicada. Tu perfil aparece como disponible en la zona elegida.')
+      setResultsOpen(true)
+      setSelectedOfferId('my-zone')
+    }, 'Disponibilidad guardada. El punto destacado del mapa es tu zona de trabajo.')
   }
 
   async function action(name: ApplicationAction, applicationId: string, phone?: string) {
@@ -300,6 +302,12 @@ export function Marketplace({ profile, phone, trades, onProfileUpdated }: {
             <button className="ghost" disabled={pending || publishing} aria-pressed={tab === 'offers'} onClick={() => changeTab('offers')}>{contractor ? 'Mis ofertas' : 'Ofertas'}</button>
             <button className="ghost" disabled={pending || publishing} aria-pressed={tab === (contractor ? 'workers' : 'applications')} onClick={() => changeTab(contractor ? 'workers' : 'applications')}>{contractor ? 'Trabajadores' : 'Mis postulaciones'}</button>
           </div>
+          {!contractor && tab === 'offers' && profile.availability === 'available' && <button className="result-card" onClick={() => selectResult('my-zone')} disabled={pending}>
+            <strong>Mi disponibilidad publicada</strong>
+            <span>{trades.find((trade) => trade.id === profile.trade_id)?.name} · {profile.years_experience} años de experiencia</span>
+            <span>Zona aproximada: {profile.latitude?.toFixed(3)}, {profile.longitude?.toFixed(3)}</span>
+            <span>Ver o editar mi disponibilidad →</span>
+          </button>}
           {viewingWorkers ? <WorkerDiscovery trades={trades} selectedId={selectedWorkerId} onSelect={selectResult} onWorkersChange={setDiscoveryWorkers} /> : <>
             <p className="note">{contractor ? 'Toca un punto del mapa para crear una oferta, o elige una existente para revisar sus candidatos.' : 'Toca un punto del mapa para ofrecer tu trabajo o elegir una oferta a la que postularte.'}</p>
             {tab === 'offers' && <label>Filtrar por oficio<select value={tradeId} onChange={(event) => { setTradeId(event.target.value); setSelectedOfferId(''); setDetailOpen(false) }}>
@@ -338,7 +346,10 @@ export function Marketplace({ profile, phone, trades, onProfileUpdated }: {
           : <p className="note">Selecciona un resultado para ver su detalle.</p>}
       </aside>
 
-      {(notice || error) && <div className="workspace-feedback">{notice && <p className="note" role="status">{notice}</p>}{error && <p className="error" role="alert">{error}</p>}</div>}
+      {(notice || error) && <div className="workspace-feedback">
+        <div>{notice && <p className="note" role="status">{notice}</p>}{error && <p className="error" role="alert">{error}</p>}</div>
+        <button className="ghost" aria-label="Cerrar aviso" onClick={() => { setNotice(''); setError('') }}>×</button>
+      </div>}
     </section>
   )
 }
