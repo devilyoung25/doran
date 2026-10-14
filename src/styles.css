@@ -319,7 +319,7 @@ a { color: var(--blue-dark); }
   .detail-panel { z-index: 5; }
   .map-workspace[data-detail-open="true"] .leaflet-top.leaflet-left,
   .map-workspace[data-detail-open="true"] .leaflet-bottom.leaflet-right { right: 0.75rem; }
-  .map-workspace > .map-section > .note { bottom: auto; top: 4rem; }
+  .map-workspace > .map-section > .note { bottom: auto; top: 7.5rem; left: 0.75rem; transform: none; max-width: calc(100% - 5.75rem); }
   .workspace-feedback { grid-row: 2; position: relative; bottom: auto; left: auto; transform: none; width: auto; margin: 0.5rem 0.75rem 0; }
   .leaflet-bar a, .map-view-controls button { width: 44px; height: 44px; line-height: 44px; }
 }
