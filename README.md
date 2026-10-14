@@ -81,7 +81,7 @@ npm run build
 
 El front usa `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`; contraseña de BD, tokens administrativos y `service_role` permanecen fuera del navegador.
 
-El mapa usa CARTO Positron cuando se configura `VITE_CARTO_API_KEY` en `.env` y en las variables de build de Cloudflare. La clave se solicita en https://carto.com/basemaps/apikey/ y es pública en el frontend; se puede restringir al dominio de la demo. Sin esa variable se conserva el mapa básico de OpenStreetMap.
+El mapa usa CARTO Voyager cuando se configura `VITE_CARTO_API_KEY` en `.env` y en las variables de build de Cloudflare. La clave se solicita en https://carto.com/basemaps/apikey/ y es pública en el frontend; se puede restringir al dominio de la demo. Sin esa variable se conserva el mapa básico de OpenStreetMap.
 
 Al iniciar se solicita geolocalización con zoom 16; si falla se conserva la zona del perfil o el centro de Pereira. Cargar publicaciones no cambia el encuadre. Seleccionar un punto lo centra fuera de los paneles y una vacante vigente sin postulación abre directamente el formulario. Los controles permiten reintentar la ubicación y ver todos los puntos. Photon resuelve direcciones cercanas, con caché por sesión y consultas secuenciales; si no identifica dirección o barrio se indica explícitamente. No modifica la ubicación persistida en Supabase.
 

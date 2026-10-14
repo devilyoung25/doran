@@ -164,7 +164,7 @@ export function App() {
           <p>Personal para obras en {PILOT_CITY}</p>
         </div>
         {ready && session && profile && view === 'home' && <details className="account-menu">
-          <summary>{profile.full_name} · {profile.role === 'worker' ? 'Trabajador' : 'Contratante'}</summary>
+          <summary><span className="account-name">{profile.full_name}</span><span className="account-role">{profile.role === 'worker' ? 'Trabajador' : 'Contratante'}</span></summary>
           <Home profile={profile} trades={trades} error={error}
             onEdit={() => { setError(''); setView('profile') }} onSignOut={signOut} />
         </details>}
@@ -215,6 +215,7 @@ function Login({ error, notice, onSubmit, onSignup }: {
   }
   return (
     <form onSubmit={submit}>
+      <div className="auth-heading"><span className="eyebrow">BIENVENIDO A DORAN</span><h2>Tu próxima obra empieza aquí.</h2><p>Entra para explorar oportunidades y talento cerca de ti.</p></div>
       <label>Correo<input name="email" type="email" autoComplete="email" required /></label>
       <label>Contraseña<input name="password" type="password" autoComplete="current-password" minLength={6} required /></label>
       {notice && <p className="note">{notice}</p>}
@@ -241,6 +242,7 @@ function Signup({ error, notice, onSubmit, onLogin }: {
   }
   return (
     <form onSubmit={submit}>
+      <div className="auth-heading"><span className="eyebrow">EMPIEZA A CONECTAR</span><h2>Construyamos nuevas oportunidades.</h2><p>Crea tu cuenta y encuentra tu lugar en la próxima obra.</p></div>
       <label>Correo<input name="email" type="email" autoComplete="email" required /></label>
       <label>Contraseña<input name="password" type="password" autoComplete="new-password" minLength={6} required /></label>
       <p className="note">Después eliges si buscas trabajo o si contratas. El rol queda fijo al guardar el perfil.</p>

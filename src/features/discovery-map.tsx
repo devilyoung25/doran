@@ -48,7 +48,7 @@ export function DiscoveryMap({ points, selectedId, onSelect, onPick, onMapClick,
     markers.current = L.layerGroup().addTo(instance)
     const cartoKey = import.meta.env.VITE_CARTO_API_KEY
     const tiles = L.tileLayer(cartoKey
-      ? `https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png?key=${encodeURIComponent(cartoKey)}`
+      ? `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=${encodeURIComponent(cartoKey)}`
       : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         + (cartoKey ? ' &copy; <a href="https://carto.com/attribution/">CARTO</a>' : ''),
