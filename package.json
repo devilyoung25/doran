@@ -7,6 +7,7 @@
     "build": "tsc --noEmit && vite build",
     "test:profile": "node tests/profile.mjs",
     "test:offers": "node tests/offers.mjs",
+    "test:map": "node tests/map.mjs",
     "test:db": "node tests/phase1.mjs"
   },
   "devDependencies": {

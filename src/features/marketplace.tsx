@@ -8,6 +8,7 @@ import { OfferCard, type ApplicationAction } from './offer-card'
 import { DiscoveryMap } from './discovery-map'
 import { WorkerDiscovery } from './worker-discovery'
 import { WorkerActions, type WorkerAction, type WorkZone, type AvailabilityRow } from './worker-actions'
+import { PlaceAddress } from './place-address'
 
 export function Marketplace({ profile, phone, trades }: {
   profile: Profile
@@ -240,7 +241,7 @@ export function Marketplace({ profile, phone, trades }: {
 
   function selectResult(id: string) {
     if (id === 'chosen-zone') return startWorkerAction('choice')
-    if (workerAction !== 'application') setWorkerAction(null)
+    setWorkerAction(!contractor && availableOffers.some((offer) => offer.id === id) ? 'application' : null)
     if (discoveryWorkers.some((worker) => worker.id === id)) {
       setSelectedWorkerId(id)
       setSelectedOfferId('')
@@ -295,7 +296,8 @@ export function Marketplace({ profile, phone, trades }: {
 
   return (
     <section className="map-workspace" aria-label="Vacantes y postulaciones" data-detail-open={detailOpen}>
-      <DiscoveryMap points={points} selectedId={selectedWorkerId || selectedOfferId}
+      <DiscoveryMap points={points} selectedId={publishing ? 'location' : workerAction === 'availability' ? 'chosen-zone' : selectedWorkerId || selectedOfferId}
+        initialCenter={{ latitude: profile.latitude ?? PILOT_ZONE.latitude, longitude: profile.longitude ?? PILOT_ZONE.longitude }} locateOnMount
         onSelect={publishing || workerAction === 'availability' ? undefined : selectResult} onMapClick={clickMap}
         sidebarInsets={{ left: resultsOpen ? 352 : 0, right: detailOpen ? 432 : 0 }}
         onPick={pending ? undefined : publishing ? (latitude, longitude) => setLocation({ latitude: String(latitude), longitude: String(longitude) })
@@ -324,7 +326,7 @@ export function Marketplace({ profile, phone, trades }: {
             <h3>Mis publicaciones ({myPublications.length})</h3>
             {myPublications.map((worker) => <button key={worker.id} className="result-card" onClick={() => selectResult(worker.id)} disabled={pending} aria-pressed={selectedWorkerId === worker.id}>
               <strong>{trades.find((trade) => trade.id === worker.trade_id)?.name} · Disponible</strong>
-              <span>Zona: {worker.latitude.toFixed(3)}, {worker.longitude.toFixed(3)}</span>
+              <PlaceAddress latitude={worker.latitude} longitude={worker.longitude} />
               <span>Ver publicación →</span>
             </button>)}
             {myPublications.length === 0 && !loading && <p className="note">Todavía no hay publicaciones tuyas para este oficio.</p>}
@@ -351,7 +353,7 @@ export function Marketplace({ profile, phone, trades }: {
 
       <aside className="workspace-panel detail-panel" hidden={!detailOpen} aria-label={publishing ? 'Formulario de oferta' : workerAction ? 'Trabajo y postulaciones' : 'Detalle del resultado'}>
         <div className="panel-heading"><h2>{publishing ? 'Nueva oferta' : workerAction === 'choice' ? '¿Qué quieres hacer aquí?' : workerAction === 'availability' ? 'Ofrecer mi trabajo aquí' : workerAction === 'application' ? 'Postularme a una oferta' : selectedWorker ? 'Publicación del trabajador' : 'Oferta y postulaciones'}</h2><button className="ghost" onClick={() => setDetailOpen(false)} aria-label="Ocultar detalle">×</button></div>
-        {publishing ? <OfferForm contractorId={profile.id} trades={trades} location={location} onLocationChange={setLocation}
+        {publishing ? <OfferForm contractorId={profile.id} trades={trades} location={location}
           pending={pending || loading} onPublish={publish} onCancel={() => { setPublishing(false); setDetailOpen(false); setResultsOpen(true) }} />
           : workerAction ? <WorkerActions mode={workerAction} profile={profile} phone={phone} trades={trades} zone={workZone}
             offers={availableOffers} selectedOfferId={selectedOfferId} pending={pending || loading} loading={loading}
@@ -361,7 +363,7 @@ export function Marketplace({ profile, phone, trades }: {
             <p>{selectedWorker.city} · Radio de trabajo: {selectedWorker.work_radius_km} km</p>
             {selectedWorker.available_from && <p>Disponible desde: {selectedWorker.available_from}</p>}
             <p className="note">El celular se comparte cuando este trabajador se postula a una de tus ofertas.</p>
-            <p>Zona: {selectedWorker.latitude.toFixed(3)}, {selectedWorker.longitude.toFixed(3)}</p>
+            <PlaceAddress latitude={selectedWorker.latitude} longitude={selectedWorker.longitude} />
             {selectedWorker.profiles.is_demo && <p className="note">Perfil DEMO: persona ficticia, sin datos de contacto reales.</p>}
             {contractor && <button className="primary" onClick={startPublishing}>Crear oferta para recibir postulaciones</button>}
             {selectedWorker.worker_id === profile.id && <button className="primary" onClick={() => startWorkerAction('availability', { latitude: selectedWorker.latitude, longitude: selectedWorker.longitude })}>Crear otra publicación en esta zona</button>}

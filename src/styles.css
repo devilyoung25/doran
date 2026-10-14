@@ -191,6 +191,10 @@ a { color: #8c3d16; }
 .map-legend span:nth-child(2) { color: #287e7b; }
 .map-legend span:nth-child(3) { color: #315ba8; }
 .map-pin:focus-visible { outline: 3px solid #1f1a17; outline-offset: 3px; }
+.place-address { display: grid; gap: 0.25rem; font-size: 0.87rem; color: #6f675f; }
+.map-view-controls { display: grid; background: #fff; }
+.map-view-controls button { border: 0; background: #fff; color: #1f1a17; width: 30px; height: 30px; padding: 0; font-size: 1.25rem; }
+.map-view-controls button + button { border-top: 1px solid #ddd; }
 
 .map-screen {
   width: 100%;

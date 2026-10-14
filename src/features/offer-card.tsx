@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { todayInColombia } from '../lib/offers.mjs'
 import type { Application, Offer, Profile, Trade } from '../lib/types'
+import { PlaceAddress } from './place-address'
 
 export type ApplicationAction = 'withdraw_application' | 'register_whatsapp_click' | 'confirm_contact' | 'reject_application' | 'select_candidate'
 
@@ -32,6 +33,7 @@ export function OfferCard({ offer, trades, profile, contractor, applications, wo
       <p className="description">{offer.description}</p>
       <p>{offer.rate_type === 'negotiable' ? 'Pago a convenir' : `${pesos.format(offer.rate_amount_cop ?? 0)} ${offer.rate_type === 'daily' ? 'por día' : 'por trabajo completo'}`}</p>
       <p>{offer.city} · Inicio: {offer.start_date}{offer.end_date && ` · Fin: ${offer.end_date}`}</p>
+      <PlaceAddress latitude={offer.latitude} longitude={offer.longitude} />
       <a href={`https://www.openstreetmap.org/?mlat=${offer.latitude}&mlon=${offer.longitude}#map=16/${offer.latitude}/${offer.longitude}`} target="_blank" rel="noopener noreferrer">Ver ubicación de la obra</a>
       {applications.map((application) => (
         <div className="application" key={application.id}>

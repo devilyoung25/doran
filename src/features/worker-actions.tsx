@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { buildProfile } from '../lib/profile.mjs'
 import type { Offer, Profile, Trade } from '../lib/types'
 import { ApplyForm } from './offer-card'
+import { PlaceAddress } from './place-address'
 
 export type WorkerAction = 'choice' | 'availability' | 'application'
 export type WorkZone = { latitude: number; longitude: number }
@@ -26,16 +27,18 @@ export function WorkerActions({ mode, profile, phone, trades, zone, offers, sele
   if (mode === 'application') {
     const offer = offers.find((item) => item.id === selectedOfferId)
     return <div className="worker-results">
-      <p className="note">Elige una oferta publicada. Tu postulación queda vinculada a esa vacante.</p>
-      {loading ? <p className="note" role="status">Cargando ofertas…</p> : offers.length === 0 ? <p className="note">No hay ofertas vigentes a las que puedas postularte. Puedes ofrecer tu trabajo mientras un contratante publica una vacante.</p> : <label>Oferta a la que quiero postularme
-        <select value={offer?.id ?? ''} disabled={pending} onChange={(event) => onSelectOffer(event.target.value)}>
+      {!offer && <p className="note">Elige una oferta publicada. Tu postulación queda vinculada a esa vacante.</p>}
+      {loading ? <p className="note" role="status">Cargando ofertas…</p> : offers.length === 0 ? <p className="note">No hay ofertas vigentes a las que puedas postularte. Puedes ofrecer tu trabajo mientras un contratante publica una vacante.</p> : !offer && <label>Oferta a la que quiero postularme
+        <select value="" disabled={pending} onChange={(event) => onSelectOffer(event.target.value)}>
           <option value="">Elegir una oferta</option>
           {offers.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
         </select>
       </label>}
       {offer && <>
+        <h3>{offer.title}</h3>
         <p>{offer.city} · Inicio: {offer.start_date}</p>
         <p className="description">{offer.description}</p>
+        <PlaceAddress latitude={offer.latitude} longitude={offer.longitude} />
         <ApplyForm key={offer.id} offerId={offer.id} profile={profile} trades={trades} pending={pending} onApply={onApply} onCancel={() => onChoose('choice')} cancelLabel="Volver a las opciones" />
       </>}
       {!loading && offers.length === 0 && <button className="primary" disabled={pending} onClick={() => onChoose('availability')}>Ofrecer mi trabajo aquí</button>}
@@ -86,7 +89,7 @@ function AvailabilityForm({ profile, phone, trades, zone, pending, onPublish, on
       <label>Años de experiencia<input name="yearsExperience" type="number" min={0} max={60} defaultValue={profile.years_experience ?? 0} required /></label>
       <label>Disponible desde<input name="availableFrom" type="date" defaultValue={profile.available_from ?? ''} /></label>
       <label>Radio de trabajo (km)<input name="workRadiusKm" type="number" min={2} max={50} defaultValue={profile.work_radius_km ?? 10} required /></label>
-      <div className="zone"><strong>Zona elegida</strong><p>{zone.latitude.toFixed(3)}, {zone.longitude.toFixed(3)}</p><p>Toca otro punto del mapa para cambiarla. Se guardará una ubicación aproximada.</p></div>
+      <div className="zone"><strong>Zona elegida</strong><PlaceAddress latitude={zone.latitude} longitude={zone.longitude} /><p>Toca otro punto del mapa para cambiarla. Se guardará una ubicación aproximada.</p></div>
       <p className="note">Los contratantes aprobados podrán ver tu perfil disponible. Tu celular se comparte al postularte a una de sus ofertas.</p>
     </fieldset>
     {error && <p className="error" role="alert">{error}</p>}

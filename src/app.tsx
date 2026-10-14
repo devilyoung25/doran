@@ -5,6 +5,7 @@ import { supabase } from './lib/supabase'
 import type { Profile, Role, Trade } from './lib/types'
 import { Marketplace } from './features/marketplace'
 import { DiscoveryMap } from './features/discovery-map'
+import { PlaceAddress } from './features/place-address'
 
 type View = 'login' | 'signup' | 'profile' | 'home'
 type ZoneStatus = 'idle' | 'locating' | 'ready' | 'fallback'
@@ -378,11 +379,12 @@ function ProfileForm({ lockedRole, profile, phone, trades, error, onSubmit, onCa
               <div className="zone">
                 <strong>Zona en {PILOT_CITY}</strong>
                 <p>{zoneCopy}</p>
+                <PlaceAddress latitude={zone.latitude} longitude={zone.longitude} />
                 <button className="ghost" type="button" onClick={locate} disabled={zoneStatus === 'locating'}>
                   {zoneStatus === 'locating' ? 'Buscando…' : 'Usar mi ubicación'}
                 </button>
               </div>
-              <DiscoveryMap points={[{ id: 'zone', ...zone, label: 'Mi zona de trabajo aproximada' }]}
+              <DiscoveryMap points={[{ id: 'zone', ...zone, label: 'Mi zona de trabajo aproximada' }]} selectedId="zone" initialCenter={zone}
                 onPick={pending || zoneStatus === 'locating' ? undefined : (latitude, longitude) => {
                   setZone({ latitude: roundZone(latitude)!, longitude: roundZone(longitude)! })
                   setZoneStatus('ready')

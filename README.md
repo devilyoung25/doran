@@ -12,7 +12,7 @@ Esta prueba de concepto demuestra un recorrido completo con información persist
 - Mapa interactivo y listado de ofertas con filtro por oficio.
 - En web, un único mapa ocupa toda la vista, con explorador a la izquierda y detalle/formulario a la derecha. Ambos paneles se pueden ocultar. En móvil se muestra un panel inferior a la vez.
 - Mapa y listado de trabajadores disponibles para contratantes aprobados, sin revelar el celular en el descubrimiento.
-- Selección de ubicación de obra y zona aproximada de trabajo tocando el mapa; también se admite ingresar las coordenadas de la obra.
+- Selección de ubicación de obra y zona aproximada de trabajo tocando el mapa. La interfaz muestra dirección cercana y barrio, sin campos de coordenadas.
 - Tocar un punto vacío como trabajador abre dos opciones: **Ofrecer mi trabajo aquí** y **Postularme a una oferta**. La primera crea una publicación independiente y conserva las anteriores; la segunda requiere elegir una vacante publicada. El botón **Trabajo y postulaciones** abre las mismas rutas sin depender del clic en mapa.
 - Postulación, consentimiento explícito de contacto, seguimiento, WhatsApp, confirmación de contacto, descarte, retiro y selección.
 - Seleccionar cubre la vacante y descarta las demás postulaciones activas, en una sola transacción de BD.
@@ -75,10 +75,15 @@ npm ci
 npm run dev
 npm run test:profile
 npm run test:offers
+npm run test:map
 npm run build
 ```
 
 El front usa `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`; contraseña de BD, tokens administrativos y `service_role` permanecen fuera del navegador.
+
+El mapa usa CARTO Positron cuando se configura `VITE_CARTO_API_KEY` en `.env` y en las variables de build de Cloudflare. La clave se solicita en https://carto.com/basemaps/apikey/ y es pública en el frontend; se puede restringir al dominio de la demo. Sin esa variable se conserva el mapa básico de OpenStreetMap.
+
+Al iniciar se solicita geolocalización con zoom 16; si falla se conserva la zona del perfil o el centro de Pereira. Cargar publicaciones no cambia el encuadre. Seleccionar un punto lo centra fuera de los paneles y una vacante vigente sin postulación abre directamente el formulario. Los controles permiten reintentar la ubicación y ver todos los puntos. Photon resuelve direcciones cercanas, con caché por sesión y consultas secuenciales; si no identifica dirección o barrio se indica explícitamente. No modifica la ubicación persistida en Supabase.
 
 `tests/phase1.mjs` borra y recrea los esquemas de la BD a la que se conecta. Ejecutarlo únicamente en PostgreSQL local desechable, no en Supabase ni en una instancia con datos que quieras conservar:
 

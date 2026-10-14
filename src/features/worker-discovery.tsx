@@ -1,5 +1,6 @@
 import { PILOT_CITY } from '../lib/profile.mjs'
 import type { Trade, WorkerPublication } from '../lib/types'
+import { PlaceAddress } from './place-address'
 
 export function WorkerDiscovery({ trades, workers, loading, tradeId, onTradeChange, onRefresh, selectedId, onSelect }: {
   trades: Trade[]
@@ -25,7 +26,7 @@ export function WorkerDiscovery({ trades, workers, loading, tradeId, onTradeChan
         {workers.map((worker) => <button className="result-card" key={worker.id} aria-pressed={selectedId === worker.id} onClick={() => onSelect(worker.id)}>
           <strong>{worker.profiles.full_name}</strong>
           <span>{trades.find((trade) => trade.id === worker.trade_id)?.name} · {worker.years_experience} años de experiencia</span>
-          <span>Zona: {worker.latitude.toFixed(3)}, {worker.longitude.toFixed(3)}</span>
+          <PlaceAddress latitude={worker.latitude} longitude={worker.longitude} />
           <span>Ver publicación →</span>
         </button>)}
       </>}

@@ -2,15 +2,15 @@ import { useState, type FormEvent } from 'react'
 import { PILOT_CITY } from '../lib/profile.mjs'
 import { buildOffer, todayInColombia } from '../lib/offers.mjs'
 import type { Trade } from '../lib/types'
+import { PlaceAddress } from './place-address'
 
 export type OfferLocation = { latitude: string; longitude: string }
 
-export function OfferForm({ contractorId, trades, pending, location, onLocationChange, onPublish, onCancel }: {
+export function OfferForm({ contractorId, trades, pending, location, onPublish, onCancel }: {
   contractorId: string
   trades: Trade[]
   pending: boolean
   location: OfferLocation
-  onLocationChange: (location: OfferLocation) => void
   onPublish: (row: NonNullable<ReturnType<typeof buildOffer>['row']>) => Promise<void>
   onCancel: () => void
 }) {
@@ -47,8 +47,11 @@ export function OfferForm({ contractorId, trades, pending, location, onLocationC
         <label>Fecha final (opcional)<input name="endDate" type="date" min={todayInColombia()} /></label>
         <h3>3. Ubicación de la obra</h3>
         <p className="note">Toca un punto del mapa para ubicar la obra en {PILOT_CITY}. Los datos del formulario se conservan mientras eliges.</p>
-        <label>Latitud de la obra<input name="latitude" type="number" step="any" min={-90} max={90} placeholder="4.813" value={location.latitude} onChange={(event) => onLocationChange({ ...location, latitude: event.target.value })} required /></label>
-        <label>Longitud de la obra<input name="longitude" type="number" step="any" min={-180} max={180} placeholder="-75.696" value={location.longitude} onChange={(event) => onLocationChange({ ...location, longitude: event.target.value })} required /></label>
+        <input name="latitude" type="hidden" value={location.latitude} />
+        <input name="longitude" type="hidden" value={location.longitude} />
+        {location.latitude && location.longitude
+          ? <PlaceAddress latitude={Number(location.latitude)} longitude={Number(location.longitude)} />
+          : <p className="note">Elige la ubicación de la obra tocando el mapa.</p>}
       </fieldset>
       {error && <p className="error" role="alert">{error}</p>}
       <button className="primary" disabled={pending}>{pending ? 'Publicando…' : 'Publicar oferta'}</button>
